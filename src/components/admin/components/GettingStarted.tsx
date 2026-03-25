@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface GettingStartedProps {
   hasCategories: boolean
@@ -11,15 +11,11 @@ interface GettingStartedProps {
 
 export function GettingStarted({ hasCategories, hasProducts, hasCredentials, onClose }: GettingStartedProps) {
   const [currentStep, setCurrentStep] = useState(0)
-  const [dismissed, setDismissed] = useState(false)
-
-  // Check if dismissed in this session
-  useEffect(() => {
-    const wasDismissed = sessionStorage.getItem('gettingStartedDismissed')
-    if (wasDismissed) {
-      setDismissed(true)
-    }
-  }, [])
+  // Use lazy initialization to check sessionStorage once on mount
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return sessionStorage.getItem('gettingStartedDismissed') === 'true'
+  })
 
   const handleDismiss = () => {
     sessionStorage.setItem('gettingStartedDismissed', 'true')
