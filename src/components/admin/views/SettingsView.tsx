@@ -1016,14 +1016,14 @@ const SettingsView: React.FC = () => {
 
         {/* ================= DELIVERY SECTION ================= */}
         {activeTab === 'delivery' && (
+          <>
           <table className="w-full border-collapse border border-gray-400">
             <thead>
               <tr className="bg-gray-50">
-                <th className="p-4 text-center w-1/5 font-bold border-r border-gray-400 uppercase text-xs">Inside Dhaka</th>
-                <th className="p-4 text-center w-1/5 font-bold border-r border-gray-400 uppercase text-xs">Outside Dhaka</th>
-                <th className="p-4 text-center w-1/5 font-bold border-r border-gray-400 uppercase text-xs">Universal Charge</th>
-                <th className="p-4 text-center w-1/5 font-bold border-r border-gray-400 uppercase text-xs">Universal ON/OFF</th>
-                <th className="p-4 text-center w-1/5 font-bold uppercase text-xs">Action</th>
+                <th className="p-4 text-center w-1/4 font-bold border-r border-gray-400 uppercase text-xs">Inside Dhaka</th>
+                <th className="p-4 text-center w-1/4 font-bold border-r border-gray-400 uppercase text-xs">Outside Dhaka</th>
+                <th className="p-4 text-center w-1/4 font-bold border-r border-gray-400 uppercase text-xs">Free Delivery Over</th>
+                <th className="p-4 text-center w-1/4 font-bold uppercase text-xs">Action</th>
               </tr>
             </thead>
             <tbody className="border border-gray-400">
@@ -1062,29 +1062,19 @@ const SettingsView: React.FC = () => {
                 </td>
                 <td className="p-4 text-center border-r border-gray-400">
                   {!deliveryEditing ? (
-                    <span className="text-sm text-slate-700">TK {universalCharge}</span>
+                    <span className="text-sm text-slate-700">TK {freeThreshold}</span>
                   ) : (
                     <div className="flex items-center justify-center gap-1">
                       <span className="text-sm text-slate-700">TK</span>
                       <input 
                         type="number"
-                        value={universalCharge}
-                        onChange={(e) => setUniversalCharge(parseInt(e.target.value) || 0)}
-                        className="same-input w-12"
+                        value={freeThreshold}
+                        onChange={(e) => setFreeThreshold(parseInt(e.target.value) || 0)}
+                        className="same-input w-16"
                         style={{ fontSize: '16px' }}
                       />
                     </div>
                   )}
-                </td>
-                <td className="p-4 text-center border-r border-gray-400">
-                  <div 
-                    className={`toggle-switch mx-auto ${isUniversalOn ? 'active' : ''}`}
-                    onClick={() => {
-                      if (deliveryEditing) {
-                        setIsUniversalOn(!isUniversalOn)
-                      }
-                    }}
-                  ></div>
                 </td>
                 <td className="p-4 text-center">
                   {!deliveryEditing ? (
@@ -1121,6 +1111,17 @@ const SettingsView: React.FC = () => {
               </tr>
             </tbody>
           </table>
+          {/* Free Delivery Info */}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <i className="ri-information-line text-blue-600 text-lg"></i>
+              <div>
+                <p className="text-sm text-blue-800 font-medium">Free Delivery Threshold</p>
+                <p className="text-xs text-blue-600 mt-1">Orders above this amount will have FREE delivery. Set to 0 to disable free delivery.</p>
+              </div>
+            </div>
+          </div>
+          </>
         )}
 
         {/* ================= SOCIAL SECTION ================= */}
