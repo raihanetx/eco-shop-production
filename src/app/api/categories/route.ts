@@ -3,54 +3,17 @@ import { db, sqlClient } from '@/db'
 import { categories, products } from '@/db/schema'
 import { eq, sql } from 'drizzle-orm'
 import { isApiAuthenticated, authErrorResponse } from '@/lib/api-auth'
-
-// Flag to track if tables have been initialized in this session
-let _tablesInitialized = false
+import { initializeDatabase, isDatabaseReady } from '@/lib/auto-init'
 
 /**
- * Ensure categories table exists
+ * GET /api/categories - Get all categories with product counts
  */
-async function ensureTablesExist() {
-  if (_tablesInitialized) return true
-  
-  try {
-    // Try to query - if it works, tables exist
-    await db.select().from(categories).limit(1)
-    _tablesInitialized = true
-    return true
-  } catch (error: any) {
-    // Table doesn't exist, create it
-    if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
-      console.log('[CATEGORIES] Creating missing tables...')
-      
-      try {
-        await sqlClient`CREATE TABLE IF NOT EXISTS categories (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          type TEXT DEFAULT 'icon',
-          icon TEXT,
-          image TEXT,
-          items INTEGER DEFAULT 0,
-          status TEXT DEFAULT 'Active',
-          created_at TIMESTAMP DEFAULT NOW()
-        )`
-        
-        console.log('[CATEGORIES] Categories table created!')
-        _tablesInitialized = true
-        return true
-      } catch (createError) {
-        console.error('[CATEGORIES] Failed to create table:', createError)
-        throw createError
-      }
-    }
-    throw error
-  }
-}
-
-// GET /api/categories - Get all categories with product counts
 export async function GET() {
   try {
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
     
     // Get all categories
     const allCategories = await db.select().from(categories)
@@ -84,7 +47,7 @@ export async function GET() {
       count: categoriesWithCounts.length
     })
   } catch (error) {
-    console.error('Error fetching categories:', error)
+    console.error('[CATEGORIES] Error fetching:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to fetch categories: ' + (error as Error).message },
       { status: 500 }
@@ -92,7 +55,9 @@ export async function GET() {
   }
 }
 
-// POST /api/categories - Create new category
+/**
+ * POST /api/categories - Create new category
+ */
 export async function POST(request: NextRequest) {
   try {
     // Authentication required
@@ -100,11 +65,22 @@ export async function POST(request: NextRequest) {
       return authErrorResponse()
     }
 
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
 
     const body = await request.json()
     
     console.log('[CATEGORIES] Creating category:', body.name)
+    
+    // Validate required fields
+    if (!body.name) {
+      return NextResponse.json(
+        { success: false, error: 'Category name is required' },
+        { status: 400 }
+      )
+    }
     
     const newCategory = await db.insert(categories).values({
       id: body.id || `CAT-${Date.now()}`,
@@ -123,7 +99,7 @@ export async function POST(request: NextRequest) {
       data: { ...newCategory[0], items: 0 }
     }, { status: 201 })
   } catch (error) {
-    console.error('[CATEGORIES] Error creating category:', error)
+    console.error('[CATEGORIES] Error creating:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to create category: ' + (error as Error).message },
       { status: 500 }
@@ -131,7 +107,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/categories - Update category
+/**
+ * PUT /api/categories - Update category
+ */
 export async function PUT(request: NextRequest) {
   try {
     // Authentication required
@@ -139,7 +117,10 @@ export async function PUT(request: NextRequest) {
       return authErrorResponse()
     }
 
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
 
     const body = await request.json()
     const { id, ...updateData } = body
@@ -175,7 +156,7 @@ export async function PUT(request: NextRequest) {
       data: updatedCategory[0]
     })
   } catch (error) {
-    console.error('Error updating category:', error)
+    console.error('[CATEGORIES] Error updating:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to update category: ' + (error as Error).message },
       { status: 500 }
@@ -183,7 +164,9 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/categories - Delete category
+/**
+ * DELETE /api/categories - Delete category
+ */
 export async function DELETE(request: NextRequest) {
   try {
     // Authentication required
@@ -191,7 +174,10 @@ export async function DELETE(request: NextRequest) {
       return authErrorResponse()
     }
 
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
@@ -235,7 +221,7 @@ export async function DELETE(request: NextRequest) {
       data: deletedCategory[0]
     })
   } catch (error) {
-    console.error('Error deleting category:', error)
+    console.error('[CATEGORIES] Error deleting:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to delete category: ' + (error as Error).message },
       { status: 500 }

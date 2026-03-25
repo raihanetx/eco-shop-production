@@ -1,86 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db, sqlClient } from '@/db'
+import { db } from '@/db'
 import { products, variants, productImages, productFaqs, relatedProducts, reviews, orderItems, categories } from '@/db/schema'
-import { eq, like, or, and, sql, inArray } from 'drizzle-orm'
+import { eq, and, sql, inArray } from 'drizzle-orm'
 import { isApiAuthenticated, authErrorResponse } from '@/lib/api-auth'
-
-// Flag to track if tables have been initialized
-let _tablesInitialized = false
-
-/**
- * Ensure products table exists
- */
-async function ensureTablesExist() {
-  if (_tablesInitialized) return true
-  
-  try {
-    // Try to query - if it works, tables exist
-    await db.select().from(products).limit(1)
-    _tablesInitialized = true
-    return true
-  } catch (error: any) {
-    // Table doesn't exist, create it
-    if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
-      console.log('[PRODUCTS] Creating missing tables...')
-      
-      try {
-        // Create categories first (foreign key dependency)
-        await sqlClient`CREATE TABLE IF NOT EXISTS categories (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          type TEXT DEFAULT 'icon',
-          icon TEXT,
-          image TEXT,
-          items INTEGER DEFAULT 0,
-          status TEXT DEFAULT 'Active',
-          created_at TIMESTAMP DEFAULT NOW()
-        )`
-        
-        // Create products table
-        await sqlClient`CREATE TABLE IF NOT EXISTS products (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL,
-          category TEXT NOT NULL,
-          category_id TEXT REFERENCES categories(id),
-          image TEXT NOT NULL,
-          price NUMERIC(10,2) NOT NULL,
-          old_price NUMERIC(10,2),
-          discount TEXT DEFAULT '0%',
-          discount_type TEXT DEFAULT 'pct',
-          discount_value NUMERIC(10,2) DEFAULT '0',
-          offer BOOLEAN DEFAULT false,
-          status TEXT DEFAULT 'active',
-          short_desc TEXT,
-          long_desc TEXT,
-          weight TEXT,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW()
-        )`
-        
-        // Create variants table
-        await sqlClient`CREATE TABLE IF NOT EXISTS variants (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL,
-          stock INTEGER NOT NULL,
-          initial_stock INTEGER NOT NULL,
-          price NUMERIC(10,2) DEFAULT '0',
-          discount TEXT DEFAULT '0%',
-          discount_type TEXT DEFAULT 'pct',
-          discount_value NUMERIC(10,2) DEFAULT '0',
-          product_id INTEGER REFERENCES products(id) NOT NULL
-        )`
-        
-        console.log('[PRODUCTS] All tables created!')
-        _tablesInitialized = true
-        return true
-      } catch (createError) {
-        console.error('[PRODUCTS] Failed to create tables:', createError)
-        throw createError
-      }
-    }
-    throw error
-  }
-}
+import { initializeDatabase, isDatabaseReady } from '@/lib/auto-init'
 
 // Helper function to parse discount string
 function parseDiscount(discountStr: string | null): { discountType: 'pct' | 'fixed'; discountValue: number } {
@@ -123,7 +46,10 @@ function addParsedDiscount(product: any) {
 // GET /api/products - Get all products
 export async function GET(request: NextRequest) {
   try {
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
     
     const searchParams = request.nextUrl.searchParams
     const category = searchParams.get('category')
@@ -213,9 +139,9 @@ export async function GET(request: NextRequest) {
       count: productsWithParsedDiscount.length
     })
   } catch (error) {
-    console.error('Error fetching products:', error)
+    console.error('[PRODUCTS] Error fetching:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch products' },
+      { success: false, error: 'Failed to fetch products: ' + (error as Error).message },
       { status: 500 }
     )
   }
@@ -229,7 +155,10 @@ export async function POST(request: NextRequest) {
       return authErrorResponse()
     }
 
-    await ensureTablesExist()
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
+    }
 
     const body = await request.json()
     
@@ -240,6 +169,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    
+    console.log('[PRODUCTS] Creating product:', body.name)
     
     const newProduct = await db.insert(products).values({
       name: body.name,
@@ -258,12 +189,14 @@ export async function POST(request: NextRequest) {
       weight: body.weight || null,
     }).returning()
     
+    console.log('[PRODUCTS] Product created successfully:', newProduct[0].id)
+    
     return NextResponse.json({
       success: true,
       data: newProduct[0]
     }, { status: 201 })
   } catch (error) {
-    console.error('Error creating product:', error)
+    console.error('[PRODUCTS] Error creating:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to create product: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
@@ -277,6 +210,11 @@ export async function PUT(request: NextRequest) {
     // Authentication check
     if (!await isApiAuthenticated()) {
       return authErrorResponse()
+    }
+
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
     }
 
     const body = await request.json()
@@ -326,7 +264,7 @@ export async function PUT(request: NextRequest) {
       data: updated[0]
     })
   } catch (error) {
-    console.error('Error updating product:', error)
+    console.error('[PRODUCTS] Error updating:', error)
     return NextResponse.json(
       { success: false, error: 'Failed to update product: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
@@ -340,6 +278,11 @@ export async function DELETE(request: NextRequest) {
     // Authentication check
     if (!await isApiAuthenticated()) {
       return authErrorResponse()
+    }
+
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
     }
 
     const { searchParams } = new URL(request.url)
@@ -385,9 +328,9 @@ export async function DELETE(request: NextRequest) {
       data: deleted[0]
     })
   } catch (error) {
-    console.error('Error deleting product:', error)
+    console.error('[PRODUCTS] Error deleting:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to delete product' },
+      { success: false, error: 'Failed to delete product: ' + (error as Error).message },
       { status: 500 }
     )
   }
@@ -399,6 +342,11 @@ export async function PATCH(request: NextRequest) {
     // Authentication check
     if (!await isApiAuthenticated()) {
       return authErrorResponse()
+    }
+
+    // Ensure database is initialized
+    if (!await isDatabaseReady()) {
+      await initializeDatabase()
     }
 
     const body = await request.json()
@@ -436,9 +384,9 @@ export async function PATCH(request: NextRequest) {
       data: updated[0]
     })
   } catch (error) {
-    console.error('Error patching product:', error)
+    console.error('[PRODUCTS] Error patching:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to update product' },
+      { success: false, error: 'Failed to update product: ' + (error as Error).message },
       { status: 500 }
     )
   }

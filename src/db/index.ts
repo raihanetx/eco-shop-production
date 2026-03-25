@@ -38,15 +38,51 @@ export const db = dbInstance
 export const sqlClient = client // Export for raw SQL execution
 
 // ============================================
-// Global caches that persist across requests
+// AUTO-INITIALIZATION ON FIRST DB ACCESS
 // ============================================
+// This ensures tables are created even if instrument.ts didn't run
 
 declare global {
   var __settingsCache: { data: any; timestamp: number } | undefined
   var __shopDataCache: { data: any; timestamp: number } | undefined
   var __dashboardCache: { data: any; timestamp: number; timeFrame: string } | undefined
   var __courierCredentials: { data: any; timestamp: number } | undefined
+  var __dbAutoInitialized: boolean | undefined
 }
+
+// Auto-initialize on first import (fallback mechanism)
+async function autoInitFallback() {
+  if (globalThis.__dbAutoInitialized) return
+  
+  try {
+    // Check if tables exist
+    const result = await client`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'settings'
+      LIMIT 1
+    `
+    
+    if (result.length === 0) {
+      console.log('[DB] Tables not found, running auto-init...')
+      
+      // Import and run initialization
+      const { initializeDatabase } = await import('@/lib/auto-init')
+      await initializeDatabase()
+    }
+    
+    globalThis.__dbAutoInitialized = true
+  } catch (error) {
+    console.error('[DB] Auto-init fallback error:', error)
+  }
+}
+
+// Run auto-init in background (non-blocking)
+autoInitFallback().catch(console.error)
+
+// ============================================
+// Global caches that persist across requests
+// ============================================
 
 // Cache getters/setters
 export function getCachedSettings() {

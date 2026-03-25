@@ -1,15 +1,23 @@
 import { NextResponse } from 'next/server'
-import { db } from '@/db'
-import { products } from '@/db/schema'
-import { sql } from 'drizzle-orm'
+import { sqlClient } from '@/db'
+import { isDatabaseReady, initializeDatabase } from '@/lib/auto-init'
 
 // Health check endpoint for load balancers and monitoring
 export async function GET() {
   const startTime = Date.now()
   
   try {
+    // Check if database is ready
+    const ready = await isDatabaseReady()
+    
+    if (!ready) {
+      // Try to auto-initialize
+      console.log('[HEALTH] Database not ready, attempting auto-init...')
+      await initializeDatabase()
+    }
+    
     // Test database connection with a simple query
-    await db.select({ count: sql<number>`1` }).from(products).limit(1)
+    await sqlClient`SELECT 1 as test`
     
     const responseTime = Date.now() - startTime
     
@@ -22,6 +30,7 @@ export async function GET() {
       environment: process.env.NODE_ENV || 'development',
       checks: {
         database: 'connected',
+        tablesReady: ready ? 'yes' : 'initialized'
       }
     }, { status: 200 })
   } catch (error) {
