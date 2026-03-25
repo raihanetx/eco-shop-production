@@ -279,7 +279,8 @@ export async function PUT(request: NextRequest) {
       }
       
       const existing = await db.select({ steadfastApiKey: settings.steadfastApiKey }).from(settings).where(eq(settings.id, 1)).limit(1)
-      const oldKey = existing[0]?.steadfastApiKey ? (safeDecrypt(existing[0].steadfastApiKey) || '') : ''
+      // Old key is decrypted, but we mask it in audit log for security
+      const oldKeyExists = !!existing[0]?.steadfastApiKey
       
       updateData.steadfastApiKey = encrypt(body.steadfastApiKey)
       updateData.steadfastApiUpdatedAt = new Date().toISOString()
@@ -288,8 +289,8 @@ export async function PUT(request: NextRequest) {
         action: 'credential_change',
         category: 'courier',
         field: 'steadfastApiKey',
-        oldValue: oldKey,
-        newValue: body.steadfastApiKey,
+        oldValue: oldKeyExists ? '••••••••' : '(not set)',
+        newValue: '••••••••',
         ipAddress: ip,
         details: 'API Key changed (encrypted)'
       })

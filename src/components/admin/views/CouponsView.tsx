@@ -97,6 +97,11 @@ export function CouponsView() {
   }
 
   const deleteCoupon = async (id: string) => {
+    // Add confirmation dialog before deleting
+    if (!confirm('Are you sure you want to delete this coupon? This action cannot be undone.')) {
+      return
+    }
+    
     try {
       const response = await csrfFetch(`/api/coupons?id=${id}`, {
         method: 'DELETE',

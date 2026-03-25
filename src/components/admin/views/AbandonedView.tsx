@@ -164,7 +164,7 @@ const AbandonedView: React.FC = () => {
                                 Visit number {idx + 1}
                               </td>
                               <td className="p-4 border-r border-gray-200 text-[13px]">
-                                <span className="text-blue-700 font-bold">{visit.relativeTime || '—'}</span>
+                                <span className="text-blue-700 font-bold">{visit.timeAgo || '—'}</span>
                                 <span className="text-gray-400 mx-1">-</span>
                                 <span className="text-gray-700 font-medium">{visit.date}</span>
                                 <span className="text-gray-400 mx-1">-</span>
