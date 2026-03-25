@@ -385,7 +385,14 @@ export default function ProductsView() {
     }
   }
 
-  const addVariety = () => setProdVarieties(prev => [...prev, { id: Date.now(), name: '', price: '', stock: '', discount: '', discountType: 'pct', discountValue: '' }])
+  const addVariety = () => {
+    console.log('[ProductsView] addVariety called, current varieties:', prodVarieties.length)
+    setProdVarieties(prev => {
+      const newVarieties = [...prev, { id: Date.now(), name: '', price: '', stock: '', discount: '', discountType: 'pct', discountValue: '' }]
+      console.log('[ProductsView] new varieties count:', newVarieties.length)
+      return newVarieties
+    })
+  }
   const addFaq = () => setProdFaqs(prev => [...prev, { id: Date.now(), question: '', answer: '' }])
   const removeVariety = (id: number) => setProdVarieties(prev => prev.filter(v => v.id !== id))
   const removeFaq = (id: number) => setProdFaqs(prev => prev.filter(f => f.id !== id))

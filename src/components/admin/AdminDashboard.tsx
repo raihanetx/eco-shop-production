@@ -68,6 +68,12 @@ function AdminDashboardContent({ setView }: { setView: (v: ViewType) => void }) 
     setDashView(viewId)
     clearEditingStates()
     setNavOpen(false) // Close nav after clicking
+    // Update URL without full page reload
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('view', viewId)
+      window.history.pushState({}, '', url.toString())
+    }
   }
 
   // Get title considering editing states

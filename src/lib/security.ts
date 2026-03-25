@@ -310,6 +310,17 @@ export async function recordFailedAttemptDB(ip: string): Promise<{ count: number
 // Clear attempts after successful login
 export async function clearFailedAttemptsDB(ip: string): Promise<void> {
   try {
+    // Ensure table exists (in case clear is called before any failed attempts)
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        ip TEXT PRIMARY KEY,
+        count INTEGER DEFAULT 0,
+        first_attempt TIMESTAMP DEFAULT NOW(),
+        last_attempt TIMESTAMP DEFAULT NOW(),
+        locked_until TIMESTAMP
+      )
+    `)
+    
     await db.execute(sql`
       DELETE FROM login_attempts WHERE ip = ${ip}
     `)
@@ -331,6 +342,17 @@ export async function clearAllRateLimits(): Promise<void> {
 // Check rate limit status
 export async function checkRateLimitDB(ip: string): Promise<{ allowed: boolean; remaining: number; lockedMinutes: number }> {
   try {
+    // Ensure table exists
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS login_attempts (
+        ip TEXT PRIMARY KEY,
+        count INTEGER DEFAULT 0,
+        first_attempt TIMESTAMP DEFAULT NOW(),
+        last_attempt TIMESTAMP DEFAULT NOW(),
+        locked_until TIMESTAMP
+      )
+    `)
+    
     const result = await db.execute(sql`
       SELECT count, locked_until FROM login_attempts WHERE ip = ${ip}
     `) as any[]

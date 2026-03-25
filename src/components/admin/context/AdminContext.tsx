@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import type { 
   Category, Product, InventoryItem, Alert, AdminReview, 
   Order, Coupon, CouponProduct, CouponCategory,
@@ -772,6 +772,32 @@ export function AdminProvider({ children, setView }: { children: ReactNode; setV
       console.error('Error fetching abandoned checkouts:', error)
     }
   }
+  
+  // Sync dashView with URL parameter on mount and URL changes
+  useEffect(() => {
+    const syncViewFromUrl = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const viewParam = params.get('view')
+        if (viewParam) {
+          const validViews = ['overview', 'orders', 'products', 'inventory', 'categories', 'coupons', 'reviews', 'abandoned', 'customers', 'credentials', 'settings', 'backup']
+          if (validViews.includes(viewParam)) {
+            setDashView(viewParam)
+          }
+        }
+      }
+    }
+    
+    // Sync on mount
+    syncViewFromUrl()
+    
+    // Listen for browser back/forward buttons
+    window.addEventListener('popstate', syncViewFromUrl)
+    
+    return () => {
+      window.removeEventListener('popstate', syncViewFromUrl)
+    }
+  }, [])
   
   // Fetch all data on mount
   useEffect(() => {
