@@ -2,11 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
   "devCommand": "npm run dev",
+  "installCommand": "npm install",
   "functions": {
     "src/app/api/**/*.ts": {
-      "memory": 1024,
       "maxDuration": 30
     }
   },
@@ -14,20 +13,14 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/_next/static/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    },
-    {
-      "source": "/(.*)\\.(jpg|jpeg|png|gif|ico|svg|webp)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=10, stale-while-revalidate=30"
+        }
       ]
     }
-  ]
+  ],
+  "env": {
+    "NODE_VERSION": "20"
+  }
 }
