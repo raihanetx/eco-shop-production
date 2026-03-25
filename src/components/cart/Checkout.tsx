@@ -53,8 +53,8 @@ export default function Checkout({ setView, onConfirm, cartItems = [], deliveryC
   const [isOffline, setIsOffline] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{name?: string; phone?: string; address?: string}>({})
   
-  // Get cart store for coupon persistence
-  const { appliedCoupon, applyCoupon } = useCartStore()
+  // Get cart store for coupon persistence and user action tracking
+  const { appliedCoupon, applyCoupon, userAddedToCart } = useCartStore()
   const hasLoadedStoredCoupon = useRef(false)
   
   // Offline detection
@@ -206,9 +206,10 @@ export default function Checkout({ setView, onConfirm, cartItems = [], deliveryC
   // Load saved delivery location
   // Removed - don't auto-fill address
 
-  // Track NEW checkout visit
+  // Track NEW checkout visit - ONLY if user explicitly added items to cart
   useEffect(() => {
-    if (!sessionId || cartItems.length === 0) return
+    // Don't track if user hasn't explicitly added items to cart
+    if (!sessionId || cartItems.length === 0 || !userAddedToCart) return
     if (visitRecordedRef.current) return
 
     const trackVisit = async () => {
@@ -245,7 +246,7 @@ export default function Checkout({ setView, onConfirm, cartItems = [], deliveryC
     }
 
     trackVisit()
-  }, [sessionId, cartItems.length])
+  }, [sessionId, cartItems.length, userAddedToCart])
 
   // Update customer info IMMEDIATELY
   useEffect(() => {

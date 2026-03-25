@@ -395,6 +395,23 @@ export default function HomeContent() {
         clearCart()
         setLastOrderNumber(orderNumber)
         
+        // Mark abandoned checkout as completed with duration tracking
+        const sessionId = localStorage.getItem('ecomart_customer_session')
+        if (sessionId) {
+          try {
+            await fetch('/api/abandoned', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId,
+                completedOrderId: orderNumber
+              })
+            })
+          } catch (e) {
+            console.error('Failed to mark abandoned checkout as completed:', e)
+          }
+        }
+        
         // Navigate to thank you with clean URL
         setView('thankyou')
         window.scrollTo(0, 0)

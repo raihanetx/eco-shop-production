@@ -20,6 +20,8 @@ interface CartState {
   items: CartItemWithQty[]
   appliedCoupon: AppliedCoupon | null
   isHydrated: boolean
+  // Track if user explicitly added items (not from localStorage restore)
+  userAddedToCart: boolean
   addItem: (item: CartItem) => void
   removeItem: (id: number) => void
   updateQuantity: (id: number, qty: number) => void
@@ -28,6 +30,7 @@ interface CartState {
   // Auto-check if current cart matches the applied coupon
   checkCouponValidity: () => Promise<boolean>
   setHydrated: (state: boolean) => void
+  setUserAddedToCart: (value: boolean) => void
 }
 
 // Track cart event to analytics API
@@ -83,12 +86,21 @@ export const useCartStore = create<CartState>()(
       items: [],
       appliedCoupon: null,
       isHydrated: false,
+      // Start as false - will be set to true when user explicitly adds items
+      userAddedToCart: false,
 
       setHydrated: (state: boolean) => {
         set({ isHydrated: state })
       },
 
+      setUserAddedToCart: (value: boolean) => {
+        set({ userAddedToCart: value })
+      },
+
       addItem: (item: CartItem) => {
+        // Mark that user explicitly added to cart
+        set({ userAddedToCart: true })
+        
         set((state) => {
           const existingItemIndex = state.items.findIndex((i) => i.id === item.id)
           
@@ -190,7 +202,7 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => {
-        set({ items: [], appliedCoupon: null })
+        set({ items: [], appliedCoupon: null, userAddedToCart: false })
       },
 
       applyCoupon: (coupon: AppliedCoupon | null) => {
@@ -225,6 +237,11 @@ export const useCartStore = create<CartState>()(
     {
       name: 'krishi-bitan-cart',
       storage: createJSONStorage(() => localStorage),
+      // Don't persist userAddedToCart - it should start fresh each session
+      partialize: (state) => ({
+        items: state.items,
+        appliedCoupon: state.appliedCoupon,
+      }),
       onRehydrateStorage: () => (state) => {
         // Set hydrated flag after rehydration is complete
         if (state) {
