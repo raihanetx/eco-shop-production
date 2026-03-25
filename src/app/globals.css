@@ -2122,7 +2122,7 @@ input:-webkit-autofill::first-line {
   width: 100%;
   padding: 10px 12px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e2e8f0 !important;
   border-radius: 8px;
   color: #1e293b;
   font-size: 13px;
@@ -2206,7 +2206,7 @@ input[type="number"].form-input::-webkit-outer-spin-button {
 .btn-cancel-prod {
   background: white;
   color: #64748b;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e2e8f0 !important;
   padding: 12px 20px;
   border-radius: 8px;
   font-weight: 600;
